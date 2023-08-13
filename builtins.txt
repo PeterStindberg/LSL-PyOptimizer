@@ -249,6 +249,8 @@ string llLinksetDataReadProtected( string keyname, string password )
 void llLinksetDataReset(  )
 integer llLinksetDataWrite( string keyname, string value )
 integer llLinksetDataWriteProtected( string keyname, string value, string password )
+list llLinksetDataDeleteFound( string pattern, string pass )
+integer llLinksetDataCountFound( string pattern )
 string llList2CSV( list src )
 float llList2Float( list src, integer index )
 integer llList2Integer( list src, integer index )
@@ -495,7 +497,6 @@ const integer AGENT_ALWAYS_RUN = 0x1000
 const integer AGENT_ATTACHMENTS = 0x2
 const integer AGENT_AUTOMATED = 0x4000
 const integer AGENT_AUTOPILOT = 0x2000
-const integer AGENT_AUTOMATED = 0x4000
 const integer AGENT_AWAY = 0x40
 const integer AGENT_BUSY = 0x800
 const integer AGENT_BY_LEGACY_NAME = 0x1
