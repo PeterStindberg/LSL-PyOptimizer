@@ -951,10 +951,14 @@ void llLinkSitTarget(integer link, vector offset, rotation rot)
 integer llLinksetDataAvailable()
 - SEF
 
+integer llLinksetDataCountFound( string pattern )
+
 integer llLinksetDataCountKeys()
 - SEF
 
 integer llLinksetDataDelete(string key)
+
+list llLinksetDataDeleteFound( string pattern, string pass )
 
 integer llLinksetDataDeleteProtected(string key, string password)
 
