@@ -918,6 +918,8 @@ void llInstantMessage(key user, string message)
 string llIntegerToBase64(integer number)
 - SEF
 
+integer llIsFriend( key agent_id )
+
 list llJson2List(string json)
 - SEF
 
