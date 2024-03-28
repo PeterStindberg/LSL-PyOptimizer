@@ -799,6 +799,7 @@ const integer MASK_EVERYONE = 3
 const integer MASK_GROUP = 2
 const integer MASK_NEXT = 4
 const integer MASK_OWNER = 1
+const string NAK = "\n\n\n"
 const string NULL_KEY = "00000000-0000-0000-0000-000000000000"
 const integer OBJECT_ACCOUNT_LEVEL = 41
 const integer OBJECT_ANIMATED_COUNT = 39
