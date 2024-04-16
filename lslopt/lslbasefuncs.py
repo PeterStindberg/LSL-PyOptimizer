@@ -1,4 +1,4 @@
-#    (C) Copyright 2015-2023 Sei Lisa. All rights reserved.
+#    (C) Copyright 2015-2024 Sei Lisa. All rights reserved.
 #
 #    This file is part of LSL PyOptimizer.
 #
@@ -1159,6 +1159,37 @@ def llChar(code):
         return u'' if code == 0 else u'\uFFFD'
     return unichr(code)
 
+def InternalGetAlg(alg):
+    hash = None
+    if alg == u'md5':
+        hash = hashlib.md5()
+    elif alg == u'sha1':
+        hash = hashlib.sha1()
+    elif alg == u'sha224':
+        hash = hashlib.sha224()
+    elif alg == u'sha256':
+        hash = hashlib.sha256()
+    elif alg == u'sha384':
+        hash = hashlib.sha384()
+    elif alg == u'sha512':
+        hash = hashlib.sha512()
+    return hash
+
+def llComputeHash(data, alg):
+    data = bytewrap(uniwrap(fs(data)).encode('utf8'))
+    alg = fs(alg)
+    hash = InternalGetAlg(alg if alg != u'md5_sha1' else u'md5')
+    if hash is None:
+        raise ELSLCantCompute  # spews error
+    hash.update(data)
+    ret = hash.hexdigest()
+    if alg == u'md5_sha1':
+        # md5_sha1 consists of concatenating the MD5 and the SHA-1
+        hash = InternalGetAlg(u'sha1')
+        hash.update(data)
+        ret += hash.hexdigest()
+    return ret.decode('utf8')
+
 def llCos(f):
     f = ff(f)
     if math.isinf(f):
@@ -1308,19 +1339,7 @@ def llHMAC(pwd, data, alg):
     pwd = bytewrap(uniwrap(fs(pwd)).encode('utf8'))
     data = bytewrap(uniwrap(fs(data)).encode('utf8'))
     alg = fs(alg)
-    hash = None
-    if alg == u'md5':
-        hash = hashlib.md5()
-    elif alg == u'sha1':
-        hash = hashlib.sha1()
-    elif alg == u'sha224':
-        hash = hashlib.sha224()
-    elif alg == u'sha256':
-        hash = hashlib.sha256()
-    elif alg == u'sha384':
-        hash = hashlib.sha384()
-    elif alg == u'sha512':
-        hash = hashlib.sha512()
+    hash = InternalGetAlg(alg)
     if hash is None:
         raise ELSLCantCompute  # spews error
     # Calculate the HMAC here, to avoid requiring yet another module
@@ -1536,13 +1555,19 @@ def llListFindList(lst, elems):
             return i
     return -1
 
-def llListFindListStrided(src, test, start, end, stride):
+def llListFindListNext(src, test, n):
+    src = fl(src)
+    test = fl(test)
+    n = fi(n)
+    raise eLSLCantCompute  # TODO: Implement llListFindListNext
+
+def llListFindStrided(src, test, start, end, stride):
     src = fl(src)
     test = fl(test)
     start = fi(start)
     end = fi(end)
     stride = fi(stride)
-    raise ELSLCantCompute  # TODO: Implement llListFindListStrided
+    raise ELSLCantCompute  # TODO: Implement llListFindStrided
 
 def llListInsertList(lst, elems, pos):
     lst = fl(lst)
@@ -1653,7 +1678,7 @@ def llListSortStrided(src, stride, idx, ascending):
     stride = fi(stride)
     idx = fi(idx)
     ascending = fi(ascending)
-    raise ELSLCantCompute  # FIXME: Implement llListSortStrided
+    raise ELSLCantCompute  # TODO: Implement llListSortStrided
 
 def llListStatistics(op, lst):
     op = fi(op)
