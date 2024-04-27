@@ -918,8 +918,6 @@ void llInstantMessage(key user, string message)
 string llIntegerToBase64(integer number)
 - SEF
 
-integer llIsFriend( key agent_id )
-
 list llJson2List(string json)
 - SEF
 
@@ -953,14 +951,10 @@ void llLinkSitTarget(integer link, vector offset, rotation rot)
 integer llLinksetDataAvailable()
 - SEF
 
-integer llLinksetDataCountFound( string pattern )
-
 integer llLinksetDataCountKeys()
 - SEF
 
 integer llLinksetDataDelete(string key)
-
-list llLinksetDataDeleteFound( string pattern, string pass )
 
 integer llLinksetDataDeleteProtected(string key, string password)
 
