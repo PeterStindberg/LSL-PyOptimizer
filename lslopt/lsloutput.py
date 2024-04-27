@@ -63,9 +63,13 @@ class outscript(object):
                          " spaces by the viewer when copy-pasting the code"
                          " (disable this warning by disabling the 'warntabs'"
                          " option).")
-            return (pfx + '"' + u2str(unicode(value), 'utf8')
+            quoted = '"'
+            if u'\x15' in value:
+                value = 'NAK'
+                quoted = ''
+            return (pfx + quoted + u2str(unicode(value), 'utf8')
                 .replace('\\','\\\\').replace('"','\\"').replace('\n','\\n')
-                + '"' + sfx)
+                + quoted + sfx)         
         if tvalue == int:
             if value < 0 and not self.globalmode and self.optsigns:
                 #return '0x%X' % (value + 4294967296)
