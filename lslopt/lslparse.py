@@ -1009,7 +1009,7 @@ class parser(object):
             return nr(nt='FNCALL', t=sym['Type'], name=name, ch=args)
 
         sym = self.FindSymbolFull(val)
-        if sym is None or sym['Kind'] != 'v':
+        if sym is None or sym['Kind'] not in {'v', 'c'}:
             self.errorpos = savepos
             raise EParseUndefined(self)
 
@@ -1052,9 +1052,8 @@ class parser(object):
                 self.AddSymbol('f', 0, 'lazy_list_set', Loc=self.usedspots,
                     Type='list', ParamTypes=params[0], ParamNames=params[1],
                     Inline=False)
-                self.AddSymbol('v', paramscope, 'L', Type='list')
-                self.AddSymbol('v', paramscope, 'i', Type='integer')
-                self.AddSymbol('v', paramscope, 'v', Type='list')
+                for typ, name in zip(*params):
+                    self.AddSymbol('v', paramscope, name, Type=typ)
                 #self.PushScope()  # no locals
 
                 # Add body (apologies for the wall of text)
@@ -1187,6 +1186,8 @@ list lazy_list_set(list L, integer i, list v)
                 )])
 
         if tok0 == '.':
+            if sym['Kind'] == 'c':
+                raise EParseSyntax(self)
             self.NextToken()
             self.expect('IDENT')
             self.ValidateField(typ, self.tok[1])
@@ -1196,6 +1197,8 @@ list lazy_list_set(list L, integer i, list v)
             typ = 'float'
 
         if tok0 in ('++', '--'):
+            if sym['Kind'] == 'c':
+                raise EParseSyntax(self)
             self.NextToken()
             if lvalue.t not in ('integer', 'float'):
                 raise EParseTypeMismatch(self)
@@ -1204,6 +1207,8 @@ list lazy_list_set(list L, integer i, list v)
         if AllowAssignment and (tok0 in self.assignment_toks
                                 or self.extendedassignment
                                    and tok0 in self.extassignment_toks):
+            if sym['Kind'] == 'c':
+                raise EParseSyntax(self)
             self.NextToken()
             expr = self.Parse_expression()
             rtyp = expr.t
@@ -1765,6 +1770,8 @@ list lazy_list_set(list L, integer i, list v)
             self.NextToken()
             self.expect('IDENT')
             name = self.tok[1]
+            if name in self.symtab[0] and self.symtab[0][name]['Kind'] == 'c':
+                raise EParseSyntax(self)
             if name in self.symtab[self.scopeindex]:
                 raise EParseAlreadyDefined(self)
             # shrinknames *needs* all labels renamed, so they are out of the way
@@ -1825,8 +1832,11 @@ list lazy_list_set(list L, integer i, list v)
                 raise EParseSyntax(self)
             # State Switch only searches for states in the global scope
             name = self.tok[1] if self.tok[0] == 'IDENT' else 'default'
-            if name not in self.symtab[0] and (name not in self.globals
-                    or self.globals[name]['Kind'] != 's'):
+            if (name not in self.symtab[0]
+                    or self.symtab[0][name]['Kind'] != 's'
+               ) and (name not in self.globals
+                    or self.globals[name]['Kind'] != 's'
+               ):
                 raise EParseUndefined(self)
             self.NextToken()
             self.expect(';')
@@ -2255,6 +2265,8 @@ list lazy_list_set(list L, integer i, list v)
             self.NextToken()
             self.expect('IDENT')
             name = self.tok[1]
+            if name in self.symtab[0] and self.symtab[0][name]['Kind'] == 'c':
+                raise EParseSyntax(self)
             if name in self.symtab[self.scopeindex]:
                 raise EParseAlreadyDefined(self)
             self.NextToken()
@@ -2351,8 +2363,8 @@ list lazy_list_set(list L, integer i, list v)
             sym = self.FindSymbolPartial(tok[1])
             # The parser accepts library function names here as valid variables
             # (it chokes at RAIL in Mono, and at runtime in LSO for some types)
-            if sym is None or sym['Kind'] != 'v' and (sym['Kind'] != 'f'
-                    or 'ParamNames' in sym):  # only UDFs have ParamNames
+            if sym is None or sym['Kind'] not in {'v', 'c'} and (sym['Kind'] !=
+                    'f' or 'ParamNames' in sym):  # only UDFs have ParamNames
                 raise EParseUndefined(self)
             typ = sym['Type']
             if ForbidList and lslcommon.LSO and typ == 'key':
@@ -2426,6 +2438,10 @@ list lazy_list_set(list L, integer i, list v)
                 self.expect('IDENT')
 
                 name = self.tok[1]
+                if (name in self.symtab[0]
+                    and self.symtab[0][name]['Kind'] == 'c'
+                   ):
+                    raise EParseSyntax(self)
                 if name in self.symtab[self.scopeindex]:
                     raise EParseAlreadyDefined(self)
 
@@ -2809,9 +2825,9 @@ list lazy_list_set(list L, integer i, list v)
 
         if lib is None:
             lib = self.lib
-        self.events = lib[0]
-        self.constants = lib[1]
-        self.funclibrary = lib[2]
+        self.events = lib[0].copy()
+        self.constants = lib[1].copy()
+        self.funclibrary = lib[2].copy()
 
         self.TypeToExtractionFunction.clear()
         for name in self.funclibrary:
@@ -2925,14 +2941,16 @@ list lazy_list_set(list L, integer i, list v)
         # The first element (0) is the global scope. Each symbol table is a
         # dictionary of symbols, whose elements are in turn dictionaries of
         # attributes. Each has a 'Kind', which can be:
-        # 'v' for variable, 'f' for function, 'l' for label, 's' for state,
-        # or 'e' for event. Some have a 'Loc' indicating the location (index)
-        # of the definition in the tree root.
-        #   Variables have 'Scope' and 'Type' (a string).
+        # 'v' for variable, 'c' for constant, 'f' for function, 'l' for label,
+        # 's' for state, or 'e' for event. Some have a 'Loc' indicating the
+        # location (index) of the definition in the tree's root.
+        #   Variables and constants have 'Scope' and 'Type' (a string).
         #     Global variables also have 'Loc'.
         #     Variables that are parameters also have 'Param'.
-        #   Functions have 'Type' (return type, a string) and 'ParamTypes' (a list of strings).
-        #     User-defined functions also have 'Loc' and 'ParamNames' (a list of strings).
+        #   Functions have 'Type' (return type, a string) and 'ParamTypes' (a
+        #     list of strings).
+        #   User-defined functions also have 'Loc' and 'ParamNames' (a list of
+        #     strings).
         #   Labels only have 'Scope'.
         #   States only have 'Loc'.
         #   Events have 'ParamTypes' and 'ParamNames', just like UDFs.
@@ -2948,14 +2966,23 @@ list lazy_list_set(list L, integer i, list v)
         self.scopestack = [0]
 
         if self.prettify:
-            # Add the constants as symbol table variables...
-            for i in self.constants:
-                self.symtab[0][i] = {'Kind':'v', 'Scope':0,
-                    'Type':lslcommon.PythonType2LSL[type(self.constants[i])]}
-            # ... and remove them as constants.
-            self.constants = {}
+            # Add all constants to the blacklist
+            self.blacklist = list(u2str(i) for i in self.constants.keys())
             # Remove TRUE and FALSE from keywords
             self.keywords -= set(('TRUE', 'FALSE'))
+
+        # Some unit tests that reuse the parser object don't initialize the
+        # blacklist, so we don't rely on it being set.
+        if not hasattr(self, 'blacklist'):
+            self.blacklist = []
+
+        for name in self.blacklist:
+            # Add the blacklisted constants to the symbol table...
+            self.symtab[0][name] = {'Kind':'c', 'Scope':0, 'W':False,
+                'Type':lslcommon.PythonType2LSL[type(self.constants[name])]}
+            # ... and remove them from the list of substitutable constants.
+            del self.constants[name]
+        assert not self.prettify or len(self.constants) == 0
 
         # Last preprocessor __FILE__. <stdin> means the current file.
         self.lastFILE = '<stdin>'
