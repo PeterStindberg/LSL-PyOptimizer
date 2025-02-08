@@ -1,4 +1,4 @@
-#    (C) Copyright 2015-2024 Sei Lisa. All rights reserved.
+#    (C) Copyright 2015-2025 Sei Lisa. All rights reserved.
 #
 #    This file is part of LSL PyOptimizer.
 #
@@ -60,7 +60,7 @@ from strutil import *
 # as is (vector)"<1,inf,info>". The 1st gives <0,0,0>, the others <1,inf,inf>.
 # The lookahead (?!i) is essential for parsing them that way without extra code.
 # Note that '|' in REs is order-sensitive.
-float_re  = re.compile(str2u(r'''
+float_re_tpl = r'''
     ^\s*[+-]?(?:
         0(x)(?:             # Hex float or hex int (captures the 'x')
             [0-9a-f]+(?:\.[0-9a-f]*)?
@@ -74,28 +74,13 @@ float_re  = re.compile(str2u(r'''
         )(?:
             e[+-]?[0-9]+    # Decimal float exponent
         )?                  # (optional)
-        |inf                # Infinity
+        |%s                 # Infinity (normal or vector variant)
         |(nan)              # NaN (captured)
     )
-    '''), re.I | re.X)
-vfloat_re = re.compile(str2u(r'''
-    ^\s*[+-]?(?:
-        0(x)(?:             # Hex float or hex int (captures the 'x')
-            [0-9a-f]+(?:\.[0-9a-f]*)?
-            |\.[0-9a-f]+    # Hex digits
-        )(?:
-            p[+-]?[0-9]+    # Hex float exponent
-        )?                  # (optional)
-        |(?:                # Decimal float or decimal int
-            [0-9]+(?:\.[0-9]*)?
-            |\.[0-9]+       # Decimal digits
-        )(?:
-            e[+-]?[0-9]+    # Decimal float exponent
-        )?                  # (optional)
-        |infinity|inf(?!i)  # Infinity (the only difference with the above)
-        |(nan)              # NaN (captured)
-    )
-    '''), re.I | re.X)
+    '''
+float_re  = re.compile(str2u(float_re_tpl % 'inf'), re.I | re.X)
+vfloat_re = re.compile(str2u(float_re_tpl % 'infinity|inf(?!i)'), re.I | re.X)
+del float_re_tpl
 
 int_re = re.compile(str2u(r'^0(x)[0-9a-f]+|^\s*[+-]?[0-9]+'), re.I)
 
@@ -1812,15 +1797,9 @@ def llModPow(base, exp, mod):
     base = fi(base)
     exp = fi(exp)
     mod = fi(mod)
-    if not lslcommon.IsCalc:
-        # This function has a delay, therefore it's not safe to compute it
-        # unless in calculator mode.
-        raise ELSLCantCompute
     # With some luck, this works fully with native ints on 64 bit machines.
     if mod in (0, 1):
         return 0
-    if exp == 0:
-        return 1
     # Convert all numbers to unsigned
     base &= 0xFFFFFFFF
     exp  &= 0xFFFFFFFF
@@ -1829,11 +1808,11 @@ def llModPow(base, exp, mod):
     ret = 1
     while True:
         if exp & 1:
-            ret = ((ret * prod) & 0xFFFFFFFF) % mod
+            ret = ((ret * prod) % mod) & 0xFFFFFFFF
         exp = exp >> 1
         if exp == 0:
             break
-        prod = ((prod * prod) & 0xFFFFFFFF) % mod
+        prod = ((prod * prod) % mod) & 0xFFFFFFFF
 
     return S32(ret)
 

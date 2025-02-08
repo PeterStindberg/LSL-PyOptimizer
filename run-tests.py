@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 #
-#    (C) Copyright 2015-2024 Sei Lisa. All rights reserved.
+#    (C) Copyright 2015-2025 Sei Lisa. All rights reserved.
 #
 #    This file is part of LSL PyOptimizer.
 #
@@ -541,8 +541,6 @@ class UnitTestCoverage(UnitTestCase):
         # The SEF table prevents this assertion from being reachable via script.
         self.assertRaises(lslfuncs.ELSLCantCompute, lslfuncs.llXorBase64Strings,
                           u"AABA", u"AABA")
-        self.assertRaises(lslfuncs.ELSLCantCompute, lslfuncs.llModPow,
-                          3, 5, 7)
         # Check invalid type in llGetListEntryType
         self.assertRaises(lslfuncs.ELSLInvalidType, lslfuncs.llGetListEntryType,
             [b'a'], 0)
